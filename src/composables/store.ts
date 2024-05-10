@@ -386,6 +386,7 @@ export const useStore = (initial: Initial) => {
   }
 
   const utils = {
+    libName,
     versions,
     userOptions,
     pr: initial.pr,
