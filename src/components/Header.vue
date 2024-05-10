@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import {
-  getSupportedEpVersions,
+  getSupportedLayuiVersions,
+  getSupportedLayuiVueVersions,
   getSupportedTSVersions,
   getSupportedVueVersions,
 } from '@/utils/dependency'
@@ -13,7 +14,6 @@ const replVersion = import.meta.env.REPL_VERSION
 const emit = defineEmits<{
   (e: 'refresh'): void
 }>()
-const nightly = ref(false)
 const dark = useDark()
 const toggleDark = useToggle(dark)
 
@@ -27,10 +27,18 @@ interface Version {
   active: string
 }
 
+const currentLib = ref('layuiVue')
+const libs = ['layuiVue', 'layui']
+
+// FIXME 临时的兼容方法
+if (window.location.search.includes('deps=layui')) {
+  currentLib.value = 'layui'
+}
+
 const versions = reactive<Record<VersionKey, Version>>({
   layuiVue: {
     text: 'layui-vue',
-    published: getSupportedEpVersions(),
+    published: getSupportedLayuiVueVersions(),
     active: store.versions.layuiVue,
   },
   vue: {
@@ -45,20 +53,34 @@ const versions = reactive<Record<VersionKey, Version>>({
   },
 })
 
-async function setVersion(key: VersionKey, v: string) {
-  versions[key].active = `loading...`
-  await store.setVersion(key, v)
-  versions[key].active = v
-}
+const versionsLayui = reactive<Record<VersionKey, Version>>({
+  layui: {
+    text: 'layui',
+    published: getSupportedLayuiVersions(),
+    active: store.versions.layui,
+  },
+})
 
-const toggleNightly = () => {
-  store.toggleNightly()
-  setVersion('layuiVue', 'latest')
+async function setVersion(key: VersionKey, v: string) {
+  const _versions = currentLib.value === 'layuiVue' ? versions : versionsLayui
+
+  _versions[key].active = `loading...`
+  await store.setVersion(key, v)
+  _versions[key].active = v
 }
 
 async function copyLink() {
   await navigator.clipboard.writeText(location.href)
   // ElMessage.success('Sharable URL has been copied to clipboard.')
+}
+
+function toggleLib() {
+  const layuiPlaygroundUrl =
+    window.location.origin +
+    window.location.pathname +
+    (window.location.search.includes('deps=layui') ? '' : '?deps=layui')
+
+  window.location.href = layuiPlaygroundUrl
 }
 
 function refreshView() {
@@ -88,8 +110,17 @@ function refreshView() {
     </div>
 
     <div flex="~ gap-2" items-center>
+      <lay-select
+        v-model="currentLib"
+        size="xs"
+        @update:model-value="toggleLib()"
+      >
+        <lay-select-option v-for="l in libs" :key="l" :value="l">
+          {{ l }}
+        </lay-select-option>
+      </lay-select>
       <div
-        v-for="(v, key) of versions"
+        v-for="(v, key) of currentLib === 'layuiVue' ? versions : versionsLayui"
         :key="key"
         flex="~ gap-2"
         items-center

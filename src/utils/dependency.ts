@@ -75,6 +75,11 @@ export const genImportMap = ({
       version: 'latest',
       path: '/lib/layer-vue.es.js',
     },
+    layui: {
+      pkg: 'layui',
+      version: 'latest',
+      path: '/dist/layui.js',
+    },
   }
 
   return {
@@ -114,10 +119,18 @@ export const getSupportedTSVersions = () => {
   )
 }
 
-export const getSupportedEpVersions = () => {
+export const getSupportedLayuiVueVersions = () => {
   const pkg = computed(() => '@layui/layui-vue')
   const versions = getVersions(pkg)
   return computed(() => {
-    return versions.value.filter((version) => gte(version, '1.1.0-beta.18'))
+    return versions.value.filter((version) => gte(version, '2.0.0'))
+  })
+}
+
+export const getSupportedLayuiVersions = () => {
+  const pkg = computed(() => 'layui')
+  const versions = getVersions(pkg)
+  return computed(() => {
+    return versions.value
   })
 }

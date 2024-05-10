@@ -5,7 +5,9 @@ import { type ImportMap, mergeImportMap } from '@/utils/import-map'
 import { IS_DEV } from '@/constants'
 import mainCode from '../template/main.vue?raw'
 import welcomeCode from '../template/welcome.vue?raw'
+import layuiHtmlCode from '../template/layui.html?raw'
 import layuiVueCode from '../template/layui-vue.js?raw'
+import layuiCode from '../template/layui.js?raw'
 import tsconfigCode from '../template/tsconfig.json?raw'
 import type { UnwrapNestedRefs } from 'vue'
 
@@ -15,7 +17,9 @@ export interface Initial {
   userOptions?: UserOptions
   pr?: string | null
 }
-export type VersionKey = 'vue' | 'layuiVue' | 'typescript'
+
+export type MainLib = 'layui' | 'layuiVue'
+export type VersionKey = 'vue' | 'layuiVue' | 'typescript' | 'layui'
 export type Versions = Record<VersionKey, string>
 export interface UserOptions {
   styleSource?: string
@@ -27,18 +31,25 @@ export type SerializeState = Record<string, string> & {
 
 const MAIN_FILE = 'src/PlaygroundMain.vue'
 const APP_FILE = 'src/App.vue'
+const LAYUI_HTML_FILE = 'src/layui.html'
 const LAYUI_VUE_FILE = 'src/layui-vue.js'
+const LAYUI_FILE = 'src/layui.js'
 const LEGACY_IMPORT_MAP = 'src/import_map.json'
 export const IMPORT_MAP = 'import-map.json'
 export const TSCONFIG = 'tsconfig.json'
 
 export const useStore = (initial: Initial) => {
+  const libName = ref<MainLib>(
+    window.location.search.includes('deps=layui') ? 'layui' : 'layuiVue',
+  )
+
   const versions = reactive(
     initial.versions ||
       ({
         vue: 'latest',
         layuiVue: 'latest',
         typescript: 'latest',
+        layui: 'latest',
       } satisfies Versions),
   )
 
@@ -48,11 +59,12 @@ export const useStore = (initial: Initial) => {
 
   const _files = initFiles(initial.serializedState || '')
 
-  let activeFile = _files[APP_FILE]
+  let activeFile =
+    _files[libName.value === 'layuiVue' ? APP_FILE : LAYUI_HTML_FILE]
   if (!activeFile) activeFile = Object.values(_files)[0]
 
   const state: StoreState = reactive({
-    mainFile: MAIN_FILE,
+    mainFile: libName.value === 'layuiVue' ? MAIN_FILE : LAYUI_HTML_FILE,
     files: _files,
     activeFile,
     errors: [],
@@ -114,6 +126,21 @@ export const useStore = (initial: Initial) => {
     { immediate: true },
   )
 
+  watch(
+    () => versions.layui,
+    (version) => {
+      const file = new File(
+        LAYUI_FILE,
+        generateLayuiCode(version, userOptions.value.styleSource).trim(),
+        hideFile.value,
+      )
+      state.files[LAYUI_FILE] = file
+      compileFile(store, file).then((errs) => (state.errors = errs))
+    },
+    { immediate: true },
+  )
+
+  // layui-vue
   function generateLayuiVueCode(version: string, styleSource?: string) {
     const style = styleSource
       ? styleSource.replace('#VERSION#', version)
@@ -124,6 +151,16 @@ export const useStore = (initial: Initial) => {
         '#JSON_SCHEMA_FORM_STYLE#',
         genCdnLink('@layui/json-schema-form', 'latest', '/lib/index.css'),
       )
+  }
+
+  // layui
+  function generateLayuiCode(version: string, styleSource?: string) {
+    const style = styleSource
+      ? styleSource.replace('#VERSION#', version)
+      : genCdnLink('layui', version, '/dist/css/layui.css')
+    return layuiCode
+      .replace('#LAYUI_LIB_STYLE#', style)
+      .replace('#LAYUI_LIB#', genCdnLink('layui', version, '/dist/layui.js'))
   }
 
   async function setVueVersion(version: string) {
@@ -206,9 +243,15 @@ export const useStore = (initial: Initial) => {
         files[filename] = new File(filename, file as string)
       }
       userOptions.value = saved._o || {}
-    } else {
-      files[APP_FILE] = new File(APP_FILE, welcomeCode)
     }
+    // url中不带编码啊
+    // 判断是layui | layuiVue
+    if (libName.value === 'layuiVue') {
+      files[APP_FILE] = new File(APP_FILE, welcomeCode)
+    } else {
+      files[LAYUI_HTML_FILE] = new File(LAYUI_HTML_FILE, layuiHtmlCode)
+    }
+
     files[MAIN_FILE] = new File(MAIN_FILE, mainCode, hideFile.value)
     if (!files[IMPORT_MAP]) {
       files[IMPORT_MAP] = new File(
@@ -252,7 +295,13 @@ export const useStore = (initial: Initial) => {
 
     if (
       file.hidden ||
-      [APP_FILE, MAIN_FILE, LAYUI_VUE_FILE, IMPORT_MAP].includes(oldFilename)
+      [
+        APP_FILE,
+        MAIN_FILE,
+        LAYUI_VUE_FILE,
+        LAYUI_HTML_FILE,
+        IMPORT_MAP,
+      ].includes(oldFilename)
     ) {
       state.errors = [`Cannot rename ${oldFilename}`]
       return
@@ -275,14 +324,14 @@ export const useStore = (initial: Initial) => {
     compileFile(store, file)
   }
 
-  async function deleteFile(filename: string) {
+  function deleteFile(filename: string) {
     if (
       [
         LAYUI_VUE_FILE,
         MAIN_FILE,
         APP_FILE,
-        LAYUI_VUE_FILE,
         IMPORT_MAP,
+        LAYUI_HTML_FILE,
       ].includes(filename)
     ) {
       $layer.msg('You cannot remove it, because Element Plus requires it.')
@@ -300,7 +349,7 @@ export const useStore = (initial: Initial) => {
     //   )
     // ) {
     if (state.activeFile.filename === filename) {
-      setActive(APP_FILE)
+      setActive(libName.value === 'layuiVue' ? APP_FILE : LAYUI_HTML_FILE)
     }
     // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
     delete state.files[filename]
@@ -329,6 +378,9 @@ export const useStore = (initial: Initial) => {
         break
       case 'typescript':
         versions.typescript = version
+        break
+      case 'layui':
+        versions.layui = version
         break
     }
   }

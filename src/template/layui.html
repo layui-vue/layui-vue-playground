@@ -1,0 +1,11 @@
+<div>
+  <button type="button" class="layui-btn">默认按钮</button>
+</div>
+<script type='module'>
+import './layui.js'
+console.log(layui, 'layui');
+
+const { layer } = layui
+
+layer.msg('layui version:' + layui.v, { time: 3000 })
+</script>
