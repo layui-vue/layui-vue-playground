@@ -27,15 +27,9 @@ interface Version {
   active: string
 }
 
-const currentLib = ref('layuiVue')
 const libs = ['layuiVue', 'layui']
 
-// FIXME 临时的兼容方法
-if (window.location.search.includes('deps=layui')) {
-  currentLib.value = 'layui'
-}
-
-const versions = reactive<Record<VersionKey, Version>>({
+const versions = reactive<Record<Exclude<VersionKey, 'layui'>, Version>>({
   layuiVue: {
     text: 'layui-vue',
     published: getSupportedLayuiVueVersions(),
@@ -53,7 +47,7 @@ const versions = reactive<Record<VersionKey, Version>>({
   },
 })
 
-const versionsLayui = reactive<Record<VersionKey, Version>>({
+const versionsLayui = reactive<Record<Extract<VersionKey, 'layui'>, Version>>({
   layui: {
     text: 'layui',
     published: getSupportedLayuiVersions(),
@@ -62,7 +56,7 @@ const versionsLayui = reactive<Record<VersionKey, Version>>({
 })
 
 async function setVersion(key: VersionKey, v: string) {
-  const _versions = currentLib.value === 'layuiVue' ? versions : versionsLayui
+  const _versions = store.libName === 'layuiVue' ? versions : versionsLayui
 
   _versions[key].active = `loading...`
   await store.setVersion(key, v)
@@ -111,7 +105,7 @@ function refreshView() {
 
     <div flex="~ gap-2" items-center>
       <lay-select
-        v-model="currentLib"
+        :model-value="store.libName"
         size="xs"
         @update:model-value="toggleLib()"
       >
@@ -120,7 +114,9 @@ function refreshView() {
         </lay-select-option>
       </lay-select>
       <div
-        v-for="(v, key) of currentLib === 'layuiVue' ? versions : versionsLayui"
+        v-for="(v, key) of store.libName === 'layuiVue'
+          ? versions
+          : versionsLayui"
         :key="key"
         flex="~ gap-2"
         items-center
