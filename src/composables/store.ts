@@ -243,13 +243,14 @@ export const useStore = (initial: Initial) => {
         files[filename] = new File(filename, file as string)
       }
       userOptions.value = saved._o || {}
-    }
-    // url中不带编码啊
-    // 判断是layui | layuiVue
-    if (libName.value === 'layuiVue') {
-      files[APP_FILE] = new File(APP_FILE, welcomeCode)
     } else {
-      files[LAYUI_HTML_FILE] = new File(LAYUI_HTML_FILE, layuiHtmlCode)
+      // url中不带编码啊
+      // 判断是layui | layuiVue
+      if (libName.value === 'layuiVue') {
+        files[APP_FILE] = new File(APP_FILE, welcomeCode)
+      } else {
+        files[LAYUI_HTML_FILE] = new File(LAYUI_HTML_FILE, layuiHtmlCode)
+      }
     }
 
     files[MAIN_FILE] = new File(MAIN_FILE, mainCode, hideFile.value)

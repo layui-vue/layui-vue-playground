@@ -132,4 +132,8 @@ body {
 .dark body {
   background-color: #1a1a1a;
 }
+
+.dark .lay-input {
+  background-color: red;
+}
 </style>
