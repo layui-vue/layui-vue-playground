@@ -63,7 +63,7 @@ export const genImportMap = ({
     '@layui/layui-vue': {
       pkg: '@layui/layui-vue',
       version: layuiVue,
-      path: '/es/index.js',
+      path: '/lib/index.js',
     },
     '@layui/json-schema-form': {
       pkg: '@layui/json-schema-form',
