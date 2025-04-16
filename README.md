@@ -1,5 +1,5 @@
 <p align="center">
-  <img width="300px" src="http://www.layui-vue.com/assets/logo.685dda16.jpg">
+  <img width="300px" src="https://avatars.githubusercontent.com/u/96014096?s=200&v=4">
 </p>
 
 # Layui-vue Playground
